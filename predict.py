@@ -11,6 +11,7 @@ TEST_DIR = "test_food"
 IMG_PATH = "test_food/img4.jpg"
 LABELS_PATH = "Khana_Dataset/labels.txt"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+MODEL = None
 
 
 # Transforms matching the validation transforms used during training.
@@ -54,7 +55,18 @@ def load_model(model_path, num_classes):
     return model
 
 
-def predict_image(model, image):
+def get_model():
+    global MODEL
+
+    if MODEL is None:
+        class_names = get_class_names(LABELS_PATH)
+        MODEL = load_model(MODEL_PATH, len(class_names))
+
+    return MODEL
+
+
+def predict(image):
+    model = get_model()
     inputs = torch.stack([
         base_transform(image),
         flip_transform(image),
@@ -76,17 +88,20 @@ def parse_args():
 
 
 def main():
+    global MODEL_PATH, LABELS_PATH
+
     args = parse_args()
     test_dir = Path(args.test_dir)
+    MODEL_PATH = args.model
+    LABELS_PATH = args.labels
 
     class_names = get_class_names(args.labels)
-    model = load_model(args.model, len(class_names))
     # print(f"Class labels and model loaded on {DEVICE}\n")
 
     img_path = IMG_PATH
     image = Image.open(img_path).convert("RGB")
 
-    pred_idx = predict_image(model, image)
+    pred_idx = predict(image)
     pred_class = class_names[pred_idx]
 
     print(f"{IMG_PATH} -> {pred_class}")
@@ -101,7 +116,7 @@ def main():
     #         print(f"Skipping {img_path.name}: {e}")
     #         continue
 
-    #     pred_idx = predict_image(model, image)
+    #     pred_idx = predict(image)
     #     pred_class = class_names[pred_idx]
     #     print(f"{img_path.name:40s} -> {pred_class}")
 
